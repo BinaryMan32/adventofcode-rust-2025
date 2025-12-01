@@ -30,50 +30,41 @@ impl FromStr for DialRotation {
 }
 
 #[derive(Debug, PartialEq)]
-struct DialState {
+struct DialRotationResult {
     position: DialPosition,
     zero_count: usize,
 }
 
-impl DialState {
-    fn initial(position: DialPosition) -> Self {
-        Self {
-            position,
-            zero_count: 0,
-        }
-    }
-}
-
 impl DialRotation {
-    fn apply(&self, state: &DialState) -> DialState {
+    fn apply(&self, initial_position: DialPosition) -> DialRotationResult {
         match self {
             DialRotation::Left(distance) => {
                 let (zero_count, distance) = distance.div_rem_euclid(&DIAL_SIZE);
-                let mut position = state.position - distance;
+                let mut position = initial_position - distance;
                 let mut zero_count = zero_count as usize;
                 if position < 0 {
                     position += DIAL_SIZE;
                     // if we started at zero, we already counted this wrap around last time
-                    if state.position != 0 {
+                    if initial_position != 0 {
                         zero_count += 1;
                     }
                 } else if position == 0 {
                     zero_count += 1;
                 }
-                DialState {
+                DialRotationResult {
                     position,
                     zero_count,
                 }
             }
             DialRotation::Right(distance) => {
                 let (zero_count, distance) = distance.div_rem_euclid(&DIAL_SIZE);
-                let mut position = state.position + distance;
+                let mut position = initial_position + distance;
                 let mut zero_count = zero_count as usize;
                 if position >= DIAL_SIZE {
                     position -= DIAL_SIZE;
                     zero_count += 1;
                 }
-                DialState {
+                DialRotationResult {
                     position,
                     zero_count,
                 }
@@ -86,9 +77,10 @@ fn part1(input: Lines) -> String {
     input
         .into_iter()
         .map(|line| line.parse::<DialRotation>().unwrap())
-        .scan(DialState::initial(50), |state, rotation| {
-            *state = rotation.apply(state);
-            Some(state.position)
+        .scan(50, |position, rotation| {
+            let result = rotation.apply(*position);
+            *position = result.position;
+            Some(result.position)
         })
         .filter(|&position| position == 0)
         .count()
@@ -99,9 +91,10 @@ fn part2(input: Lines) -> String {
     input
         .into_iter()
         .map(|line| line.parse::<DialRotation>().unwrap())
-        .scan(DialState::initial(50), |state, rotation| {
-            *state = rotation.apply(state);
-            Some(state.zero_count)
+        .scan(50, |position, rotation| {
+            let result = rotation.apply(*position);
+            *position = result.position;
+            Some(result.zero_count)
         })
         .sum::<usize>()
         .to_string()
@@ -129,8 +122,8 @@ mod tests {
     #[test]
     fn rotate_no_zero_left() {
         assert_eq!(
-            DialRotation::Left(30).apply(&DialState::initial(82)),
-            DialState {
+            DialRotation::Left(30).apply(82),
+            DialRotationResult {
                 position: 52,
                 zero_count: 0
             }
@@ -140,8 +133,8 @@ mod tests {
     #[test]
     fn rotate_no_zero_right() {
         assert_eq!(
-            DialRotation::Right(22).apply(&DialState::initial(50)),
-            DialState {
+            DialRotation::Right(22).apply(50),
+            DialRotationResult {
                 position: 72,
                 zero_count: 0
             }
@@ -151,8 +144,8 @@ mod tests {
     #[test]
     fn rotate_from_zero_left() {
         assert_eq!(
-            DialRotation::Left(5).apply(&DialState::initial(0)),
-            DialState {
+            DialRotation::Left(5).apply(0),
+            DialRotationResult {
                 position: 95,
                 zero_count: 0
             }
@@ -162,8 +155,8 @@ mod tests {
     #[test]
     fn rotate_from_zero_right() {
         assert_eq!(
-            DialRotation::Right(14).apply(&DialState::initial(0)),
-            DialState {
+            DialRotation::Right(14).apply(0),
+            DialRotationResult {
                 position: 14,
                 zero_count: 0
             }
@@ -173,8 +166,8 @@ mod tests {
     #[test]
     fn rotate_to_zero_left() {
         assert_eq!(
-            DialRotation::Left(55).apply(&DialState::initial(55)),
-            DialState {
+            DialRotation::Left(55).apply(55),
+            DialRotationResult {
                 position: 0,
                 zero_count: 1
             }
@@ -184,8 +177,8 @@ mod tests {
     #[test]
     fn rotate_to_zero_right() {
         assert_eq!(
-            DialRotation::Right(48).apply(&DialState::initial(52)),
-            DialState {
+            DialRotation::Right(48).apply(52),
+            DialRotationResult {
                 position: 0,
                 zero_count: 1
             }
@@ -195,8 +188,8 @@ mod tests {
     #[test]
     fn rotate_past_zero_left() {
         assert_eq!(
-            DialRotation::Left(68).apply(&DialState::initial(50)),
-            DialState {
+            DialRotation::Left(68).apply(50),
+            DialRotationResult {
                 position: 82,
                 zero_count: 1
             }
@@ -206,8 +199,8 @@ mod tests {
     #[test]
     fn rotate_past_zero_right() {
         assert_eq!(
-            DialRotation::Right(60).apply(&DialState::initial(95)),
-            DialState {
+            DialRotation::Right(60).apply(95),
+            DialRotationResult {
                 position: 55,
                 zero_count: 1
             }
@@ -217,24 +210,24 @@ mod tests {
     #[test]
     fn rotate_multiple_spins_left() {
         assert_eq!(
-            DialRotation::Left(1022).apply(&DialState::initial(51)),
-            DialState {
+            DialRotation::Left(1022).apply(51),
+            DialRotationResult {
                 position: 29,
                 zero_count: 10
             },
             "simple"
         );
         assert_eq!(
-            DialRotation::Left(1022).apply(&DialState::initial(0)),
-            DialState {
+            DialRotation::Left(1022).apply(0),
+            DialRotationResult {
                 position: 78,
                 zero_count: 10
             },
             "from zero"
         );
         assert_eq!(
-            DialRotation::Left(1022).apply(&DialState::initial(22)),
-            DialState {
+            DialRotation::Left(1022).apply(22),
+            DialRotationResult {
                 position: 0,
                 zero_count: 11
             },
@@ -245,24 +238,24 @@ mod tests {
     #[test]
     fn rotate_multiple_spins_right() {
         assert_eq!(
-            DialRotation::Right(1022).apply(&DialState::initial(51)),
-            DialState {
+            DialRotation::Right(1022).apply(51),
+            DialRotationResult {
                 position: 73,
                 zero_count: 10
             },
             "simple"
         );
         assert_eq!(
-            DialRotation::Right(1022).apply(&DialState::initial(0)),
-            DialState {
+            DialRotation::Right(1022).apply(0),
+            DialRotationResult {
                 position: 22,
                 zero_count: 10
             },
             "from zero"
         );
         assert_eq!(
-            DialRotation::Right(1022).apply(&DialState::initial(78)),
-            DialState {
+            DialRotation::Right(1022).apply(78),
+            DialRotationResult {
                 position: 0,
                 zero_count: 11
             },
