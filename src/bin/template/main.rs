@@ -1,4 +1,4 @@
-use advent_of_code::{create_runner, named, Named, Runner};
+use advent_of_code::{Named, Runner, create_runner, named};
 use std::str::Lines;
 
 fn part1(input: Lines) -> String {
