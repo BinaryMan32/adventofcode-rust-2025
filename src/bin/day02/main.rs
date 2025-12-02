@@ -1,6 +1,6 @@
 use advent_of_code::{Named, Runner, create_runner, named};
+use itertools::Itertools;
 use num::traits::Euclid;
-use std::collections::HashSet;
 use std::iter::successors;
 use std::ops::RangeInclusive;
 use std::str::{FromStr, Lines};
@@ -46,11 +46,11 @@ impl IdRange {
             .take_while(|id| id <= self.range.end())
     }
 
-    fn invalid_ids_any(&self) -> HashSet<IdRangeNumber> {
+    fn invalid_ids_any(&self) -> impl Iterator<Item = IdRangeNumber> {
         let digits = Self::num_digits(*self.range.end());
         (2..=digits as usize)
             .flat_map(|num_parts| self.invalid_ids(num_parts))
-            .collect()
+            .unique()
     }
 }
 
@@ -87,12 +87,7 @@ fn part1(mut input: Lines) -> String {
 fn part2(mut input: Lines) -> String {
     parse_id_ranges(input.next().unwrap())
         .into_iter()
-        .map(|id_range| {
-            id_range
-                .invalid_ids_any()
-                .into_iter()
-                .sum::<IdRangeNumber>()
-        })
+        .map(|id_range| id_range.invalid_ids_any().sum::<IdRangeNumber>())
         .sum::<IdRangeNumber>()
         .to_string()
 }
