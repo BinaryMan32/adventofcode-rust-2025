@@ -7,23 +7,32 @@ fn parse_batteries(line: &str) -> Vec<u8> {
         .collect()
 }
 
-fn max_battery_joltage(batteries: &[u8]) -> u32 {
-    let max_first = batteries[..batteries.len() - 1].iter().max().unwrap();
-    let max_first_index = batteries.iter().position(|b| b == max_first).unwrap();
-    let max_second = batteries[(max_first_index + 1)..].iter().max().unwrap();
-    (batteries[max_first_index] * 10 + max_second) as u32
+fn max_battery_joltage(batteries: &[u8], count: usize) -> Option<u64> {
+    let count = count - 1;
+    let max_digit = batteries[..batteries.len() - count].iter().max()?;
+    if count > 0 {
+        let max_index = batteries.iter().position(|b| b == max_digit)?;
+        max_battery_joltage(&batteries[(max_index + 1)..], count)
+            .map(|joltage| joltage + (*max_digit as u64) * 10u64.pow(count as u32))
+    } else {
+        Some(*max_digit as u64)
+    }
 }
 
 fn part1(input: Lines) -> String {
     input
         .map(parse_batteries)
-        .map(|batteries| max_battery_joltage(&batteries))
-        .sum::<u32>()
+        .map(|batteries| max_battery_joltage(&batteries, 2).unwrap_or(0))
+        .sum::<u64>()
         .to_string()
 }
 
 fn part2(input: Lines) -> String {
-    input.take(0).count().to_string()
+    input
+        .map(parse_batteries)
+        .map(|batteries| max_battery_joltage(&batteries, 12).unwrap_or(0))
+        .sum::<u64>()
+        .to_string()
 }
 
 fn main() {
@@ -43,7 +52,7 @@ mod tests {
     fn example() {
         let input = include_str!("example.txt");
         verify!(part1, input, "357");
-        verify!(part2, input, "0");
+        verify!(part2, input, "3121910778619");
     }
 
     #[rstest]
@@ -51,8 +60,18 @@ mod tests {
     #[case("811111111111119", 89)]
     #[case("234234234234278", 78)]
     #[case("818181911112111", 92)]
-    fn test_max_battery_joltage(#[case] batteries: &str, #[case] expected_joltage: u32) {
+    fn test_max_battery_joltage_2(#[case] batteries: &str, #[case] expected_joltage: u64) {
         let batteries = parse_batteries(batteries);
-        assert_eq!(max_battery_joltage(&batteries), expected_joltage);
+        assert_eq!(max_battery_joltage(&batteries, 2), Some(expected_joltage));
+    }
+
+    #[rstest]
+    #[case("987654321111111", 987654321111)]
+    #[case("811111111111119", 811111111119)]
+    #[case("234234234234278", 434234234278)]
+    #[case("818181911112111", 888911112111)]
+    fn test_max_battery_joltage_12(#[case] batteries: &str, #[case] expected_joltage: u64) {
+        let batteries = parse_batteries(batteries);
+        assert_eq!(max_battery_joltage(&batteries, 12), Some(expected_joltage));
     }
 }
