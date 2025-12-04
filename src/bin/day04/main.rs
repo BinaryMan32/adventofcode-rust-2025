@@ -42,26 +42,38 @@ impl Grid {
             .count()
     }
 
-    fn accessible_rolls(&self) -> usize {
-        self.rows
-            .iter()
-            .enumerate()
-            .map(|(y, row)| {
-                row.iter()
-                    .enumerate()
-                    .filter(|(x, is_roll)| **is_roll && self.neighbor_rolls(*x, y) < 4)
-                    .count()
+    fn accessible_rolls(&self) -> impl Iterator<Item = (usize, usize)> {
+        self.rows.iter().enumerate().flat_map(move |(y, row)| {
+            row.iter().enumerate().filter_map(move |(x, is_roll)| {
+                if *is_roll && self.neighbor_rolls(x, y) < 4 {
+                    Some((x, y))
+                } else {
+                    None
+                }
             })
-            .sum()
+        })
+    }
+
+    fn remove_accessible(&mut self) -> usize {
+        let accessible = self.accessible_rolls().collect_vec();
+        let accessible_count = accessible.len();
+        accessible.into_iter().for_each(|(x, y)| {
+            self.rows[y][x] = false;
+        });
+        accessible_count
+    }
+
+    fn total_accessible_rolls(&mut self) -> usize {
+        std::iter::from_fn(|| Some(self.remove_accessible()).filter(|c| *c > 0)).sum()
     }
 }
 
 fn part1(input: Lines) -> String {
-    Grid::parse(input).accessible_rolls().to_string()
+    Grid::parse(input).accessible_rolls().count().to_string()
 }
 
 fn part2(input: Lines) -> String {
-    input.take(0).count().to_string()
+    Grid::parse(input).total_accessible_rolls().to_string()
 }
 
 fn main() {
@@ -80,6 +92,6 @@ mod tests {
     fn example() {
         let input = include_str!("example.txt");
         verify!(part1, input, "13");
-        verify!(part2, input, "0");
+        verify!(part2, input, "43");
     }
 }
