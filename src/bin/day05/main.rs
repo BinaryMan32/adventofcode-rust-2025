@@ -27,8 +27,31 @@ fn part1(input: Lines) -> String {
         .to_string()
 }
 
+fn merge_ranges(mut ranges: Vec<RangeInclusive<u64>>) -> Vec<RangeInclusive<u64>> {
+    ranges.sort_by_key(|r| *r.start());
+    let mut merged = Vec::<RangeInclusive<u64>>::with_capacity(ranges.len());
+    for range in ranges {
+        // range.start == last.end + 1 when 2 ranges are adjacent but not overlapping
+        // we'd still get the right answer without merging these, but might as well
+        // to have one less range in the output
+        if let Some(last) = merged.last_mut()
+            && *range.start() <= last.end() + 1
+        {
+            *last = *last.start()..=*last.end().max(range.end());
+        } else {
+            merged.push(range.clone());
+        }
+    }
+    merged
+}
+
 fn part2(input: Lines) -> String {
-    input.take(0).count().to_string()
+    let (ranges, _numbers) = parse_input(input);
+    merge_ranges(ranges)
+        .into_iter()
+        .map(|range| range.count())
+        .sum::<usize>()
+        .to_string()
 }
 
 fn main() {
@@ -47,6 +70,6 @@ mod tests {
     fn example() {
         let input = include_str!("example.txt");
         verify!(part1, input, "3");
-        verify!(part2, input, "0");
+        verify!(part2, input, "14");
     }
 }
