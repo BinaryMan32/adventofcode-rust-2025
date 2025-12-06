@@ -2,6 +2,7 @@ use advent_of_code::{Named, Runner, create_runner, named};
 use itertools::Itertools;
 use std::str::{FromStr, Lines};
 
+#[derive(Debug, PartialEq)]
 enum Operation {
     Add,
     Multiply,
@@ -19,6 +20,7 @@ impl FromStr for Operation {
     }
 }
 
+#[derive(Debug, PartialEq)]
 struct Problem {
     numbers: Vec<u64>,
     operation: Operation,
@@ -45,7 +47,7 @@ impl Problem {
     }
 }
 
-fn parse_problems(mut input: Lines) -> Vec<Problem> {
+fn parse_problems1(mut input: Lines) -> Vec<Problem> {
     let problems = input
         .next_back()
         .expect("at least one line")
@@ -63,15 +65,50 @@ fn parse_problems(mut input: Lines) -> Vec<Problem> {
 }
 
 fn part1(input: Lines) -> String {
-    parse_problems(input)
+    parse_problems1(input)
         .into_iter()
         .map(|problem| problem.solve())
         .sum::<u64>()
         .to_string()
 }
 
+fn parse_problems2(input: Lines) -> Vec<Problem> {
+    let lines = input.collect_vec();
+    let max_len = lines.iter().map(|line| line.len()).max().unwrap_or(0);
+    let num_digits = lines.len() - 1;
+    let mut problems = Vec::new();
+    let mut numbers = Vec::<u64>::new();
+    for column in (0..max_len).rev() {
+        let maybe_number = (0..num_digits)
+            .flat_map(|line| lines[line].chars().nth(column))
+            .collect::<String>()
+            .trim()
+            .parse::<u64>()
+            .ok();
+        if let Some(number) = maybe_number {
+            numbers.push(number);
+        }
+        let maybe_operation = lines
+            .last()
+            .unwrap()
+            .chars()
+            .nth(column)
+            .filter(|c| !c.is_whitespace())
+            .map(|c| c.to_string().parse::<Operation>().expect("valid operation"));
+        if let Some(operation) = maybe_operation {
+            problems.push(Problem { numbers, operation });
+            numbers = Vec::new();
+        }
+    }
+    problems
+}
+
 fn part2(input: Lines) -> String {
-    input.take(0).count().to_string()
+    parse_problems2(input)
+        .into_iter()
+        .map(|problem| problem.solve())
+        .sum::<u64>()
+        .to_string()
 }
 
 fn main() {
@@ -90,6 +127,32 @@ mod tests {
     fn example() {
         let input = include_str!("example.txt");
         verify!(part1, input, "4277556");
-        verify!(part2, input, "0");
+        verify!(part2, input, "3263827");
+    }
+
+    #[test]
+    fn test_parse_problems2() {
+        let input = include_str!("example.txt");
+        assert_eq!(
+            parse_problems2(input.lines()),
+            vec![
+                Problem {
+                    numbers: vec![4, 431, 623],
+                    operation: Operation::Add,
+                },
+                Problem {
+                    numbers: vec![175, 581, 32],
+                    operation: Operation::Multiply,
+                },
+                Problem {
+                    numbers: vec![8, 248, 369],
+                    operation: Operation::Add,
+                },
+                Problem {
+                    numbers: vec![356, 24, 1],
+                    operation: Operation::Multiply,
+                },
+            ]
+        );
     }
 }
