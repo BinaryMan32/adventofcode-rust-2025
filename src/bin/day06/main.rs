@@ -73,14 +73,14 @@ fn part1(input: Lines) -> String {
 }
 
 fn parse_problems2(input: Lines) -> Vec<Problem> {
-    let lines = input.collect_vec();
+    let lines = input.map(|line| line.chars().collect_vec()).collect_vec();
     let max_len = lines.iter().map(|line| line.len()).max().unwrap_or(0);
     let num_digits = lines.len() - 1;
     let mut problems = Vec::new();
     let mut numbers = Vec::<u64>::new();
     for column in (0..max_len).rev() {
         let maybe_number = (0..num_digits)
-            .flat_map(|line| lines[line].chars().nth(column))
+            .flat_map(|line| lines[line].get(column))
             .collect::<String>()
             .trim()
             .parse::<u64>()
@@ -91,8 +91,7 @@ fn parse_problems2(input: Lines) -> Vec<Problem> {
         let maybe_operation = lines
             .last()
             .unwrap()
-            .chars()
-            .nth(column)
+            .get(column)
             .filter(|c| !c.is_whitespace())
             .map(|c| c.to_string().parse::<Operation>().expect("valid operation"));
         if let Some(operation) = maybe_operation {
