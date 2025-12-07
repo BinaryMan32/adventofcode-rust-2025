@@ -1,5 +1,7 @@
 use advent_of_code::{Named, Runner, create_runner, named};
-use core::fmt;
+use core::{fmt, panic};
+use itertools::Itertools;
+use std::iter::repeat_n;
 use std::ops::Range;
 use std::str::Lines;
 
@@ -118,6 +120,46 @@ impl TachyonManifold {
     fn run(&mut self) -> usize {
         self.start().map(|y| self.step(y)).sum::<usize>()
     }
+
+    fn count_timelines(&self) -> usize {
+        let results_row = repeat_n(None, self.cells[0].len()).collect_vec();
+        let mut results = repeat_n(results_row, self.cells.len()).collect_vec();
+        self.count_timelines_pos((self.start.0, self.start.1 + 1), &mut results)
+    }
+
+    fn count_timelines_pos(
+        &self,
+        pos: (usize, usize),
+        results: &mut Vec<Vec<Option<usize>>>,
+    ) -> usize {
+        if pos.1 >= self.cells.len() {
+            1
+        } else {
+            match results[pos.1][pos.0] {
+                Some(count) => count,
+                None => {
+                    let count = self.count_timelines_pos_internal(pos, results);
+                    results[pos.1][pos.0] = Some(count);
+                    count
+                }
+            }
+        }
+    }
+
+    fn count_timelines_pos_internal(
+        &self,
+        pos: (usize, usize),
+        results: &mut Vec<Vec<Option<usize>>>,
+    ) -> usize {
+        match self.cells[pos.1][pos.0] {
+            Cell::Empty => self.count_timelines_pos((pos.0, pos.1 + 1), results),
+            Cell::Splitter => {
+                self.count_timelines_pos((pos.0 - 1, pos.1), results)
+                    + self.count_timelines_pos((pos.0 + 1, pos.1), results)
+            }
+            Cell::Beam => panic!("Beams should not be present"),
+        }
+    }
 }
 
 fn part1(input: Lines) -> String {
@@ -126,7 +168,7 @@ fn part1(input: Lines) -> String {
 }
 
 fn part2(input: Lines) -> String {
-    input.take(0).count().to_string()
+    TachyonManifold::parse(input).count_timelines().to_string()
 }
 
 fn main() {
@@ -145,7 +187,7 @@ mod tests {
     fn example() {
         let input = include_str!("example.txt");
         verify!(part1, input, "21");
-        verify!(part2, input, "0");
+        verify!(part2, input, "40");
     }
 
     #[test]
