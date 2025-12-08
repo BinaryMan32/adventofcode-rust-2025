@@ -4,31 +4,39 @@ use std::str::{FromStr, Lines};
 
 #[derive(Debug)]
 struct JunctionBox {
-    pos: [i32; 3]
+    pos: [i32; 3],
 }
 
 impl FromStr for JunctionBox {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let pos = s.splitn(3, ',').flat_map(|n| n.parse::<i32>()).collect_array().ok_or(format!("unable to parse '{}'", s))?;
-        Ok(Self{ pos })
+        let pos = s
+            .splitn(3, ',')
+            .flat_map(|n| n.parse::<i32>())
+            .collect_array()
+            .ok_or(format!("unable to parse '{}'", s))?;
+        Ok(Self { pos })
     }
 }
 
 impl JunctionBox {
     fn distance_squared_to(&self, other: &Self) -> u64 {
-        self.pos.iter()
+        self.pos
+            .iter()
             .zip(other.pos)
             .map(|(&a, b)| {
                 let diff = (a - b).abs() as u64;
                 diff * diff
-            }).sum()
+            })
+            .sum()
     }
 }
 
 fn parse_input(input: Lines) -> Vec<JunctionBox> {
-    input.flat_map(|line| line.parse::<JunctionBox>()).collect_vec()
+    input
+        .flat_map(|line| line.parse::<JunctionBox>())
+        .collect_vec()
 }
 
 #[derive(Eq, PartialEq, PartialOrd, Ord)]
@@ -42,7 +50,7 @@ fn shortest_connections(boxes: &[JunctionBox], n: usize) -> Vec<Connection> {
         .flat_map(|i| {
             (0..i).map(move |j| Connection {
                 distance_squared: boxes[i].distance_squared_to(&boxes[j]),
-                boxes: [i, j]
+                boxes: [i, j],
             })
         })
         .k_smallest(n)
@@ -58,7 +66,7 @@ impl Components {
     fn new(n: usize) -> Self {
         let parent = (0..n).collect_vec();
         let size = repeat_n(1, n).collect_vec();
-        Self{ parent, size }
+        Self { parent, size }
     }
 
     fn find_root(&mut self, i: usize) -> usize {
@@ -95,7 +103,10 @@ impl Components {
     }
 }
 
-fn components_add_connection<'a> (components: &'a mut Components, connection: &Connection) -> &'a Components {
+fn components_add_connection<'a>(
+    components: &'a mut Components,
+    connection: &Connection,
+) -> &'a Components {
     components.union(connection.boxes[0], connection.boxes[1]);
     components
 }
@@ -110,7 +121,7 @@ fn components_from_connections(connections: &[Connection], n: usize) -> Componen
 
 fn part1(input: Lines) -> String {
     let boxes = parse_input(input);
-    let num_connections = if boxes.len() <= 20 {10} else {1000};
+    let num_connections = if boxes.len() <= 20 { 10 } else { 1000 };
     components_from_connections(&shortest_connections(&boxes, num_connections), boxes.len())
         .largest_components(3)
         .iter()
@@ -143,7 +154,6 @@ mod tests {
         verify!(part2, input, "0");
     }
 
-
     fn readable_connection(connection: &Connection, boxes: &[JunctionBox]) -> [[i32; 3]; 2] {
         let mut connection = connection.boxes.map(|b| boxes[b].pos);
         connection.sort();
@@ -156,26 +166,39 @@ mod tests {
         let boxes = parse_input(input.lines());
         let mut connections = shortest_connections(&boxes, 4);
         connections.sort();
-        let connections = connections.into_iter().map(|c| readable_connection(&c, &boxes)).collect_vec();
-        assert_eq!(connections, vec![
-            [[162,817,812], [425,690,689]],
-            [[162,817,812], [431,825,988]],
-            [[805,96,715], [906,360,560]],
-            [[425,690,689], [431,825,988]],
-        ]);
+        let connections = connections
+            .into_iter()
+            .map(|c| readable_connection(&c, &boxes))
+            .collect_vec();
+        assert_eq!(
+            connections,
+            vec![
+                [[162, 817, 812], [425, 690, 689]],
+                [[162, 817, 812], [431, 825, 988]],
+                [[805, 96, 715], [906, 360, 560]],
+                [[425, 690, 689], [431, 825, 988]],
+            ]
+        );
     }
 
     fn check_components(actual: &mut Components, expected: Vec<Vec<usize>>) {
-        let mut checked: HashMap::<usize, Vec<usize>> = HashMap::new();
+        let mut checked: HashMap<usize, Vec<usize>> = HashMap::new();
         for expected_set in expected {
             let expected_root = actual.find_root(expected_set[0]);
             for a in expected_set[1..].iter() {
                 let actual_root = actual.find_root(*a);
-                assert_eq!(actual_root, expected_root, "{} and {} have different roots {} and {}", a, expected_set[0], actual_root, expected_root)
+                assert_eq!(
+                    actual_root, expected_root,
+                    "{} and {} have different roots {} and {}",
+                    a, expected_set[0], actual_root, expected_root
+                )
             }
             assert_eq!(actual.size[expected_root], expected_set.len());
             if let Some(conflict) = checked.get(&expected_root) {
-                panic!("{:?} and {:?} should have different roots, both were {}", expected_set, conflict, expected_root);
+                panic!(
+                    "{:?} and {:?} should have different roots, both were {}",
+                    expected_set, conflict, expected_root
+                );
             }
             checked.entry(expected_root).insert_entry(expected_set);
         }
@@ -197,7 +220,6 @@ mod tests {
         assert_eq!(components.largest_components(4), [4, 0, 0, 0]);
     }
 
-
     #[test]
     fn test_largest_components() {
         let input = include_str!("example.txt");
@@ -212,28 +234,35 @@ mod tests {
         let mut components = Components::new(boxes.len());
 
         assert_eq!(
-            components_add_connection(&mut components, &connections.next().unwrap()).largest_components(5),
+            components_add_connection(&mut components, &connections.next().unwrap())
+                .largest_components(5),
             [2, 1, 1, 1, 1]
         );
 
         assert_eq!(
-            components_add_connection(&mut components, &connections.next().unwrap()).largest_components(5),
+            components_add_connection(&mut components, &connections.next().unwrap())
+                .largest_components(5),
             [3, 1, 1, 1, 1]
         );
 
         assert_eq!(
-            components_add_connection(&mut components, &connections.next().unwrap()).largest_components(5),
+            components_add_connection(&mut components, &connections.next().unwrap())
+                .largest_components(5),
             [3, 2, 1, 1, 1]
         );
 
         assert_eq!(
-            components_add_connection(&mut components, &connections.next().unwrap()).largest_components(5),
+            components_add_connection(&mut components, &connections.next().unwrap())
+                .largest_components(5),
             [3, 2, 1, 1, 1]
         );
 
         for connection in connections {
             components_add_connection(&mut components, &connection);
         }
-        assert_eq!(components.largest_components(12), [5, 4, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0]);
+        assert_eq!(
+            components.largest_components(12),
+            [5, 4, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0]
+        );
     }
 }
