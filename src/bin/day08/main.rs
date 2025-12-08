@@ -26,7 +26,7 @@ impl JunctionBox {
             .iter()
             .zip(other.pos)
             .map(|(&a, b)| {
-                let diff = (a - b).abs() as u64;
+                let diff = (a - b).unsigned_abs() as u64;
                 diff * diff
             })
             .sum()
@@ -130,7 +130,22 @@ fn part1(input: Lines) -> String {
 }
 
 fn part2(input: Lines) -> String {
-    input.take(0).count().to_string()
+    let boxes = parse_input(input);
+    // just guess that 10,000 is enough since we don't want to test all possible connections
+    let connections = shortest_connections(&boxes, 10_000);
+    let mut components = Components::new(boxes.len());
+    for connection in connections {
+        components_add_connection(&mut components, &connection);
+        if components.largest_components(1)[0] == boxes.len() {
+            return connection
+                .boxes
+                .map(|b| boxes[b].pos[0] as u64)
+                .iter()
+                .product::<u64>()
+                .to_string();
+        }
+    }
+    "".to_string()
 }
 
 fn main() {
@@ -151,7 +166,7 @@ mod tests {
     fn example() {
         let input = include_str!("example.txt");
         verify!(part1, input, "40");
-        verify!(part2, input, "0");
+        verify!(part2, input, "25272");
     }
 
     fn readable_connection(connection: &Connection, boxes: &[JunctionBox]) -> [[i32; 3]; 2] {
