@@ -45,16 +45,13 @@ struct Connection {
     boxes: [usize; 2],
 }
 
-fn shortest_connections(boxes: &[JunctionBox], n: usize) -> Vec<Connection> {
-    (0..boxes.len())
-        .flat_map(|i| {
-            (0..i).map(move |j| Connection {
-                distance_squared: boxes[i].distance_squared_to(&boxes[j]),
-                boxes: [i, j],
-            })
+fn all_connections_iter(boxes: &[JunctionBox]) -> impl Iterator<Item = Connection> {
+    (0..boxes.len()).flat_map(move |i| {
+        (0..i).map(move |j| Connection {
+            distance_squared: boxes[i].distance_squared_to(&boxes[j]),
+            boxes: [i, j],
         })
-        .k_smallest(n)
-        .collect_vec()
+    })
 }
 
 struct Components {
@@ -122,7 +119,10 @@ fn components_from_connections(connections: &[Connection], n: usize) -> Componen
 fn part1(input: Lines) -> String {
     let boxes = parse_input(input);
     let num_connections = if boxes.len() <= 20 { 10 } else { 1000 };
-    components_from_connections(&shortest_connections(&boxes, num_connections), boxes.len())
+    let connections = all_connections_iter(&boxes)
+        .k_smallest(num_connections)
+        .collect_vec();
+    components_from_connections(&connections, boxes.len())
         .largest_components(3)
         .iter()
         .product::<usize>()
@@ -131,10 +131,9 @@ fn part1(input: Lines) -> String {
 
 fn part2(input: Lines) -> String {
     let boxes = parse_input(input);
-    // just guess that 10,000 is enough since we don't want to test all possible connections
-    let connections = shortest_connections(&boxes, 10_000);
     let mut components = Components::new(boxes.len());
-    for connection in connections {
+    // just guess that 10,000 is enough since we don't want to test all possible connections
+    for connection in all_connections_iter(&boxes).k_smallest(10_000).sorted() {
         components_add_connection(&mut components, &connection);
         if components.largest_components(1)[0] == boxes.len() {
             return connection
@@ -179,10 +178,9 @@ mod tests {
     fn test_shortest_connections() {
         let input = include_str!("example.txt");
         let boxes = parse_input(input.lines());
-        let mut connections = shortest_connections(&boxes, 4);
-        connections.sort();
-        let connections = connections
-            .into_iter()
+        let connections = all_connections_iter(&boxes)
+            .k_smallest(4)
+            .sorted()
             .map(|c| readable_connection(&c, &boxes))
             .collect_vec();
         assert_eq!(
@@ -241,9 +239,11 @@ mod tests {
         let boxes = parse_input(input.lines());
         assert_eq!(boxes.len(), 20);
 
-        let mut connections = shortest_connections(&boxes, 10);
+        let connections = all_connections_iter(&boxes)
+            .k_smallest(10)
+            .sorted()
+            .collect_vec();
         assert_eq!(connections.len(), 10);
-        connections.sort();
         let mut connections = connections.into_iter();
 
         let mut components = Components::new(boxes.len());
