@@ -98,7 +98,17 @@ fn part1(input: Lines) -> String {
 }
 
 fn part2(input: Lines) -> String {
-    input.take(0).count().to_string()
+    let devices = input
+        .map(|line| line.parse::<Device>().unwrap())
+        .collect_vec();
+    let graph = Graph::from_devices(&devices);
+    let fft_first = graph.count_paths_name("svr", "fft")
+        * graph.count_paths_name("fft", "dac")
+        * graph.count_paths_name("dac", "out");
+    let dac_first = graph.count_paths_name("svr", "dac")
+        * graph.count_paths_name("dac", "fft")
+        * graph.count_paths_name("fft", "out");
+    (fft_first + dac_first).to_string()
 }
 
 fn main() {
@@ -114,10 +124,15 @@ mod tests {
     use advent_of_code::verify;
 
     #[test]
-    fn example() {
+    fn example1() {
         let input = include_str!("example.txt");
         verify!(part1, input, "5");
-        verify!(part2, input, "0");
+    }
+
+    #[test]
+    fn example2() {
+        let input = include_str!("example2.txt");
+        verify!(part2, input, "2");
     }
 
     #[test]
